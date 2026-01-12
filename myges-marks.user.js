@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MyPrettyGradES
 // @namespace    http://tampermonkey.net/
-// @version      0.6
+// @version      0.7
 // @author       Ailcope
 // @match        https://myges.fr/student/marks
 // @grant        none
@@ -21,8 +21,12 @@
         const s = document.createElement('style');
         s.id = STYLE_ID;
         s.textContent = `
-            .mpg-stats-panel{position:fixed;right:12px;bottom:12px;z-index:99999;background:#fff;border:1px solid #ddd;padding:10px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.12);font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#222;min-width:220px;max-width:400px}
-            .mpg-stats-panel h4{margin:0 0 6px 0;font-size:14px}
+            .mpg-stats-panel{position:fixed;right:12px;bottom:12px;z-index:99999;background:#fff;border:1px solid #ddd;padding:10px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.12);font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#222;min-width:220px;max-width:400px;transition:transform 0.3s ease-in-out}
+            .mpg-stats-panel.mpg-minimized{transform:translateY(calc(100% - 40px));overflow:hidden;min-width:auto;width:180px}
+            .mpg-stats-panel h4{margin:0 0 6px 0;font-size:14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+            .mpg-stats-content{transition:opacity 0.2s}
+            .mpg-minimized .mpg-stats-content{opacity:0;pointer-events:none}
+            .mpg-minimize-btn{font-size:18px;line-height:1;color:#888;cursor:pointer;user-select:none}
             .mpg-stats-row{display:flex;justify-content:space-between;margin:4px 0}
             .mpg-mark-good{background:rgba(46,204,113,0.9) !important;color:#072a00 !important;font-weight:700 !important}
             .mpg-mark-bad{background:rgba(231,76,60,0.9) !important;color:#3b0000 !important;font-weight:700 !important}
@@ -45,13 +49,9 @@
             .mpg-scroll-area { flex: 1; overflow-x: auto; height: 100%; scrollbar-width: thin; }
             .mpg-bars-container { 
                 display: flex; height: 100%; 
-                background: repeating-linear-gradient(0deg, #f0f0f0 0px, #f0f0f0 1px, transparent 1px, transparent 25px);
-                background-position: 0 10px; /* Offset to align with bottom of bars (20px label - 10px shift?) Adjusted in JS/CSS logic */
-                background-size: 100% 100px; /* Limit grid height? No */
-                /* Better grid: */
                 background: linear-gradient(to top, #eee 1px, transparent 1px);
                 background-size: 100% 25px;
-                background-position: 0 10px; /* Shift to match 0 at bottom of chart area */
+                background-position: 0 10px;
             }
             
             .mpg-bar-wrapper { 
@@ -122,7 +122,6 @@
             return out;
         }
 
-        // determine column indexes from header when possible
         let coefIdx = -1, ectsIdx = -1, moyIdx = -1, subjectIdx = -1;
         let headerRow = null;
         const theadRow = table.querySelector('thead tr');
@@ -150,11 +149,9 @@
             subjectIdx = headerLabels.findIndex(t => t.includes('mati'));
         }
 
-        // fallback when header not detected
         const useFallback = (coefIdx === -1 && ectsIdx === -1);
         if (useFallback) { coefIdx = 2; ectsIdx = 3; subjectIdx = 0; }
 
-        // prepare expanded rows matrix
         const rowsTds = rows.map(r => expandCells(Array.from(r.querySelectorAll('td'))));
         const maxCols = Math.max(headerLabels.length, rowsTds.reduce((m, tds) => Math.max(m, tds.length), 0));
         const numericCount = new Array(maxCols).fill(0);
@@ -300,7 +297,6 @@
             const flexContainer = document.createElement('div');
             flexContainer.className = 'mpg-chart-flex';
 
-            // Y-Axis
             const yAxis = document.createElement('div');
             yAxis.className = 'mpg-y-axis';
             [0, 5, 10, 15, 20].forEach(n => {
@@ -310,14 +306,12 @@
             });
             flexContainer.appendChild(yAxis);
 
-            // Scroll Area
             const scrollArea = document.createElement('div');
             scrollArea.className = 'mpg-scroll-area';
             
             const barsContainer = document.createElement('div');
             barsContainer.className = 'mpg-bars-container';
 
-            // Filter courses with an average
             const validCourses = stats.courses.filter(c => c.avg !== null);
             
             if (validCourses.length === 0) {
@@ -338,7 +332,6 @@
                 const bar = document.createElement('div');
                 bar.className = 'mpg-bar';
                 const val = Math.max(0, Math.min(20, c.avg));
-                // Height in pixels (max 100px for 20)
                 const heightPx = (val / 20) * 100;
                 bar.style.height = heightPx + 'px';
                 bar.setAttribute('data-val', formatNumber(c.avg, 1));
@@ -383,10 +376,34 @@
             panel.className = 'mpg-stats-panel';
             document.body.appendChild(panel);
         }
+        
+        // Save minimized state
+        const isMinimized = panel.classList.contains('mpg-minimized');
+        
         panel.innerHTML = '';
         const h = document.createElement('h4');
-        h.textContent = 'MyGES — Statistiques de notes';
+        h.textContent = 'MyPrettyGradES';
+        
+        const minBtn = document.createElement('span');
+        minBtn.className = 'mpg-minimize-btn';
+        minBtn.textContent = isMinimized ? '+' : '−';
+        minBtn.onclick = (e) => {
+            e.stopPropagation();
+            panel.classList.toggle('mpg-minimized');
+            minBtn.textContent = panel.classList.contains('mpg-minimized') ? '+' : '−';
+        };
+        h.appendChild(minBtn);
+        
+        // Allow clicking header to toggle
+        h.onclick = () => {
+            panel.classList.toggle('mpg-minimized');
+            minBtn.textContent = panel.classList.contains('mpg-minimized') ? '+' : '−';
+        };
+        
         panel.appendChild(h);
+
+        const content = document.createElement('div');
+        content.className = 'mpg-stats-content';
 
         const rows = [];
         rows.push(['Nombre de notes', stats.allMarks.length]);
@@ -404,12 +421,11 @@
             const left = document.createElement('div'); left.textContent = r[0];
             const right = document.createElement('div'); right.textContent = (typeof r[1] === 'number') ? formatNumber(r[1],2) : r[1];
             div.appendChild(left); div.appendChild(right);
-            panel.appendChild(div);
+            content.appendChild(div);
         }
 
-        // Add chart
         if (stats.courses.some(c => c.avg !== null)) {
-            panel.appendChild(buildChart(stats));
+            content.appendChild(buildChart(stats));
         }
 
         const toggle = document.createElement('div');
@@ -420,12 +436,18 @@
             applyColoring(s);
             buildPanel(s);
         });
-        panel.appendChild(toggle);
+        content.appendChild(toggle);
 
         const note = document.createElement('div');
         note.className = 'mpg-small';
         note.textContent = 'Vert: >= moyenne pondérée • Rouge: < moyenne pondérée';
-        panel.appendChild(note);
+        content.appendChild(note);
+
+        panel.appendChild(content);
+        
+        if (isMinimized) {
+            panel.classList.add('mpg-minimized');
+        }
     }
 
     let lastRun = 0;
