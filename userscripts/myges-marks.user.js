@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MyPrettyGradES
 // @namespace    http://tampermonkey.net/
-// @version      0.7
+// @version      0.10
 // @author       Ailcope
 // @match        https://myges.fr/student/marks
 // @grant        none
@@ -12,66 +12,111 @@
     'use strict';
 
     const FALLBACK_XPATH = '/html/body/div[3]/div[2]/div[3]/div/form[2]/div[4]/div[2]';
-
     const STYLE_ID = 'mpg-stats-styles';
     const DEBUG = !!(window.MPG_DEBUG || localStorage.getItem('mpg_debug') === '1');
-    const COLORS_KEY = 'mpg_colors_enabled';
+
+    let areColorsEnabled = true;
+    let isMinimized = false;
 
     function addStyles() {
         if (document.getElementById(STYLE_ID)) return;
         const s = document.createElement('style');
         s.id = STYLE_ID;
         s.textContent = `
-            .mpg-stats-panel{position:fixed;right:12px;bottom:12px;z-index:99999;background:#fff;border:1px solid #ddd;padding:10px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.12);font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#222;min-width:220px;max-width:400px;transition:transform 0.3s ease-in-out}
-            .mpg-stats-panel.mpg-minimized{transform:translateY(calc(100% - 40px));overflow:hidden;min-width:auto;width:180px}
-            .mpg-stats-panel h4{margin:0 0 6px 0;font-size:14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
-            .mpg-stats-content{transition:opacity 0.2s}
-            .mpg-minimized .mpg-stats-content{opacity:0;pointer-events:none}
-            .mpg-minimize-btn{font-size:18px;line-height:1;color:#888;cursor:pointer;user-select:none}
-            .mpg-stats-row{display:flex;justify-content:space-between;margin:4px 0}
-            .mpg-mark-good{background:rgba(46,204,113,0.9) !important;color:#072a00 !important;font-weight:700 !important}
-            .mpg-mark-bad{background:rgba(231,76,60,0.9) !important;color:#3b0000 !important;font-weight:700 !important}
-            .mpg-mark-yellow{background:rgba(241,196,15,0.9) !important;color:#4a2b00 !important;font-weight:700 !important}
-            .mpg-toggle-btn{display:inline-block;padding:4px 8px;border-radius:6px;border:1px solid #ccc;background:#f7f7f7;cursor:pointer;margin-top:6px;width:100%;text-align:center;box-sizing:border-box}
-            .mpg-small{font-size:12px;color:#666;margin-top:4px;text-align:center}
+            .mpg-stats-panel {
+                position: fixed; right: 12px; bottom: 12px; z-index: 99999;
+                background: #f3f3f3; border: 1px solid #ccc; border-radius: 6px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                font-size: 13px; color: #222;
+                width: 320px;
+                display: flex; flex-direction: column;
+                transition: height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+                overflow: hidden;
+                height: auto;
+            }
+            .mpg-stats-panel.mpg-minimized {
+                height: 32px !important;
+            }
             
-            .mpg-chart-container{margin-top:10px;padding:10px;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
-            .mpg-chart-title{font-size:12px;font-weight:bold;margin-bottom:6px;text-align:center}
+            /* Windows-like Header */
+            .mpg-header {
+                display: flex; justify-content: space-between; align-items: center;
+                background: #fff; border-bottom: 1px solid #e5e5e5;
+                height: 32px; padding-left: 12px;
+                user-select: none; cursor: default;
+            }
+            .mpg-title { font-weight: 600; font-size: 12px; color: #333; }
+            .mpg-win-controls { display: flex; height: 100%; align-items: center; }
+            .mpg-win-btn {
+                width: 46px; height: 100%; display: flex; justify-content: center; align-items: center;
+                cursor: pointer; transition: background 0.2s; font-size: 16px; color: #555;
+            }
+            .mpg-win-btn:hover { background: #e5e5e5; color: #000; }
+            .mpg-win-btn:active { background: #cacaca; }
+
+            .mpg-content {
+                padding: 12px; background: #f9f9f9; flex: 1; overflow-y: auto;
+                display: flex; flex-direction: column; gap: 8px;
+            }
+
+            .mpg-stats-row { display: flex; justify-content: space-between; margin: 2px 0; }
             
-            .mpg-chart-flex { display: flex; align-items: flex-end; height: 130px; }
+            /* Colors */
+            .mpg-mark-good { background: rgba(46,204,113,0.9) !important; color: #072a00 !important; font-weight: 700 !important; }
+            .mpg-mark-bad { background: rgba(231,76,60,0.9) !important; color: #3b0000 !important; font-weight: 700 !important; }
+            .mpg-mark-yellow { background: rgba(241,196,15,0.9) !important; color: #4a2b00 !important; font-weight: 700 !important; }
+            
+            .mpg-small { font-size: 11px; color: #777; text-align: center; margin-top: 4px; }
+            
+            /* Chart */
+            .mpg-chart-container {
+                margin-top: 6px; padding: 8px; background: #fff; border: 1px solid #eee; border-radius: 4px;
+            }
+            .mpg-chart-title { font-size: 11px; font-weight: bold; margin-bottom: 4px; text-align: center; }
+            .mpg-chart-flex { display: flex; align-items: flex-end; height: 100px; }
             .mpg-y-axis { 
                 display: flex; flex-direction: column-reverse; justify-content: space-between; 
-                height: 100px; margin-bottom: 20px; margin-right: 6px; 
-                font-size: 10px; color: #888; text-align: right; 
+                height: 80px; margin-bottom: 16px; margin-right: 6px; 
+                font-size: 9px; color: #888; text-align: right; 
                 border-right: 1px solid #ccc; padding-right: 4px;
             }
             .mpg-y-axis span { line-height: 1; }
-            
             .mpg-scroll-area { flex: 1; overflow-x: auto; height: 100%; scrollbar-width: thin; }
             .mpg-bars-container { 
                 display: flex; height: 100%; 
                 background: linear-gradient(to top, #eee 1px, transparent 1px);
-                background-size: 100% 25px;
+                background-size: 100% 20px;
                 background-position: 0 10px;
             }
-            
             .mpg-bar-wrapper { 
                 display: flex; flex-direction: column; align-items: center; justify-content: flex-end; 
-                flex: 0 0 36px; height: 100%; position: relative;
+                flex: 0 0 30px; height: 100%; position: relative;
             }
             .mpg-bar-area {
-                flex: 0 0 100px; width: 100%; display: flex; align-items: flex-end; justify-content: center;
+                flex: 0 0 80px; width: 100%; display: flex; align-items: flex-end; justify-content: center;
                 border-bottom: 1px solid #ccc;
             }
-            .mpg-bar { width: 18px; background:#3498db; position:relative; transition:height 0.3s; min-height:1px; border-radius: 2px 2px 0 0; }
-            .mpg-bar:hover::after{content:attr(data-val);position:absolute;top:-22px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:2px 4px;border-radius:4px;font-size:10px;white-space:nowrap;z-index:10}
-            .mpg-bar-label { 
-                flex: 0 0 20px; width: 100%; text-align:center; font-size:9px; 
-                overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height: 20px;
-                padding: 0 2px;
+            .mpg-bar { width: 14px; background:#3498db; position:relative; transition:height 0.3s; min-height:1px; border-radius: 2px 2px 0 0; }
+            .mpg-bar:hover::after {
+                content: attr(data-val); position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+                background: #333; color: #fff; padding: 2px 4px; border-radius: 3px; font-size: 9px; white-space: nowrap; z-index: 10;
             }
-            .mpg-switch{display:flex;align-items:center;gap:8px;margin-top:8px}
-            .mpg-switch input[type="checkbox"]{width:16px;height:16px}
+            .mpg-bar-label { 
+                flex: 0 0 16px; width: 100%; text-align: center; font-size: 8px; 
+                overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 16px;
+                padding: 0 1px;
+            }
+
+            /* Switch */
+            .mpg-switch-container { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0; }
+            .mpg-switch-label { font-size: 12px; color: #333; }
+            .mpg-switch { position: relative; display: inline-block; width: 34px; height: 20px; }
+            .mpg-switch input { opacity: 0; width: 0; height: 0; }
+            .mpg-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px; }
+            .mpg-slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+            input:checked + .mpg-slider { background-color: #3498db; }
+            input:checked + .mpg-slider:before { transform: translateX(14px); }
         `;
         document.head.appendChild(s);
     }
@@ -178,7 +223,7 @@
 
                 const coefText = (tds[coefIdx] && tds[coefIdx].textContent) ? tds[coefIdx].textContent : '';
                 const ectsText = (tds[ectsIdx] && tds[ectsIdx].textContent) ? tds[ectsIdx].textContent : '';
-
+                
                 let subjectText = `Matière ${rowIndex+1}`;
                 if (subjectIdx !== -1 && tds[subjectIdx]) {
                     subjectText = (tds[subjectIdx].textContent || '').trim();
@@ -237,9 +282,15 @@
 
     function applyColoring(stats) {
         if (!stats) return;
-        // Clear any previous coloring/avg column before applying
-        clearColoring(stats);
+        
+        // 1. Clean up existing colors
+        stats.courses.forEach(course => {
+            course.marks.forEach(m => {
+                m.cell.classList.remove('mpg-mark-good','mpg-mark-bad','mpg-mark-yellow');
+            });
+        });
 
+        // 2. Ensure Average Column exists
         const table = stats.table;
         const thead = table.querySelector('thead');
         if (thead && !thead.querySelector('.mpg-avg-header')) {
@@ -250,52 +301,41 @@
             thead.querySelector('tr').appendChild(th);
         }
 
-        for (const course of stats.courses) {
-            for (const m of course.marks) {
-                const v = Number(m.value);
-                if (Number.isFinite(v)) {
-                    if (Math.abs(v - 10) < 1e-6) {
-                        m.cell.classList.add('mpg-mark-yellow');
-                    } else if (v > 10 && v <= 20) {
-                        m.cell.classList.add('mpg-mark-good');
-                    } else if (v >= 0 && v < 10) {
-                        m.cell.classList.add('mpg-mark-bad');
-                    }
-                }
+        stats.courses.forEach(course => {
+            let avgTd = course.row.querySelector('.mpg-course-avg-cell');
+            if (!avgTd) {
+                avgTd = document.createElement('td');
+                avgTd.className = 'mpg-course-avg-cell';
+                avgTd.style.textAlign = 'center';
+                avgTd.style.fontWeight = '600';
+                course.row.appendChild(avgTd);
             }
-            const avgTd = document.createElement('td');
-            avgTd.className = 'mpg-course-avg-cell';
-            avgTd.style.textAlign = 'center';
-            avgTd.style.fontWeight = '600';
-            avgTd.textContent = course.avg !== null ? formatNumber(course.avg,2) : '';
-            if (course.avg !== null) {
-                const av = Number(course.avg);
-                if (Math.abs(av - 10) < 1e-6) {
-                    avgTd.classList.add('mpg-mark-yellow');
-                } else if (av > 10 && av <= 20) {
-                    avgTd.classList.add('mpg-mark-good');
-                } else if (av >= 0 && av < 10) {
-                    avgTd.classList.add('mpg-mark-bad');
-                }
-            }
-            course.row.appendChild(avgTd);
-        }
-    }
+            // Reset average cell colors
+            avgTd.classList.remove('mpg-mark-good','mpg-mark-bad','mpg-mark-yellow');
+            avgTd.textContent = course.avg !== null ? formatNumber(course.avg,2) : '-';
+        });
 
-    function clearColoring(stats) {
-        if (!stats) return;
-        for (const course of stats.courses) {
-            course.marks.forEach(m => {
-                m.cell.classList.remove('mpg-mark-good','mpg-mark-bad','mpg-mark-yellow');
+        // 3. Apply colors ONLY if enabled
+        if (areColorsEnabled) {
+            stats.courses.forEach(course => {
+                // Marks
+                course.marks.forEach(m => {
+                    const v = Number(m.value);
+                    if (Number.isFinite(v)) {
+                        if (Math.abs(v - 10) < 1e-6) m.cell.classList.add('mpg-mark-yellow');
+                        else if (v > 10) m.cell.classList.add('mpg-mark-good');
+                        else if (v >= 0 && v < 10) m.cell.classList.add('mpg-mark-bad');
+                    }
+                });
+                // Average
+                const avgTd = course.row.querySelector('.mpg-course-avg-cell');
+                if (avgTd && course.avg !== null) {
+                    const av = Number(course.avg);
+                    if (Math.abs(av - 10) < 1e-6) avgTd.classList.add('mpg-mark-yellow');
+                    else if (av > 10) avgTd.classList.add('mpg-mark-good');
+                    else if (av >= 0 && av < 10) avgTd.classList.add('mpg-mark-bad');
+                }
             });
-            const existingAvgCell = course.row.querySelector('.mpg-course-avg-cell');
-            if (existingAvgCell) existingAvgCell.remove();
-        }
-        const table = stats.table;
-        const thead = table.querySelector('thead');
-        if (thead) {
-            const avgHeader = thead.querySelector('.mpg-avg-header');
-            if (avgHeader) avgHeader.remove();
         }
     }
 
@@ -303,7 +343,7 @@
         try {
             const container = document.createElement('div');
             container.className = 'mpg-chart-container';
-
+            
             const title = document.createElement('div');
             title.className = 'mpg-chart-title';
             title.textContent = 'Moyennes par matière';
@@ -323,12 +363,12 @@
 
             const scrollArea = document.createElement('div');
             scrollArea.className = 'mpg-scroll-area';
-
+            
             const barsContainer = document.createElement('div');
             barsContainer.className = 'mpg-bars-container';
 
             const validCourses = stats.courses.filter(c => c.avg !== null);
-
+            
             if (validCourses.length === 0) {
                 const msg = document.createElement('div');
                 msg.className = 'mpg-small';
@@ -347,23 +387,23 @@
                 const bar = document.createElement('div');
                 bar.className = 'mpg-bar';
                 const val = Math.max(0, Math.min(20, c.avg));
-                const heightPx = (val / 20) * 100;
+                const heightPx = (val / 20) * 80; // 80px max height
                 bar.style.height = heightPx + 'px';
                 bar.setAttribute('data-val', formatNumber(c.avg, 1));
-
-                if (Math.abs(c.avg - 10) < 1e-6) {
-                    bar.style.background = '#f1c40f';
-                } else if (c.avg > 10) {
-                    bar.style.background = '#2ecc71';
+                
+                if (areColorsEnabled) {
+                    if (Math.abs(c.avg - 10) < 1e-6) bar.style.background = '#f1c40f';
+                    else if (c.avg > 10) bar.style.background = '#2ecc71';
+                    else bar.style.background = '#e74c3c';
                 } else {
-                    bar.style.background = '#e74c3c';
+                    bar.style.background = '#3498db'; // Blue if colors disabled
                 }
 
                 barArea.appendChild(bar);
 
                 const label = document.createElement('div');
                 label.className = 'mpg-bar-label';
-                let shortName = (c.name || '').replace(/^[A-Z0-9]+\s-\s/, '');
+                let shortName = (c.name || '').replace(/^[A-Z0-9]+\s-\s/, ''); 
                 if (shortName.length > 8) shortName = shortName.substring(0, 8) + '..';
                 label.textContent = shortName;
                 label.title = c.name;
@@ -391,34 +431,38 @@
             panel.className = 'mpg-stats-panel';
             document.body.appendChild(panel);
         }
-
-        // Save minimized state
-        const isMinimized = panel.classList.contains('mpg-minimized');
-
+        
         panel.innerHTML = '';
-        const h = document.createElement('h4');
-        h.textContent = 'MyPrettyGradES';
 
-        const minBtn = document.createElement('span');
-        minBtn.className = 'mpg-minimize-btn';
-        minBtn.textContent = isMinimized ? '+' : '−';
+        // Header
+        const header = document.createElement('div');
+        header.className = 'mpg-header';
+        
+        const title = document.createElement('span');
+        title.className = 'mpg-title';
+        title.textContent = 'MyPrettyGradES';
+        header.appendChild(title);
+
+        const controls = document.createElement('div');
+        controls.className = 'mpg-win-controls';
+        
+        const minBtn = document.createElement('div');
+        minBtn.className = 'mpg-win-btn';
+        minBtn.textContent = '—'; // Em dash for minimize look
+        minBtn.title = 'Réduire';
         minBtn.onclick = (e) => {
             e.stopPropagation();
-            panel.classList.toggle('mpg-minimized');
-            minBtn.textContent = panel.classList.contains('mpg-minimized') ? '+' : '−';
+            isMinimized = !isMinimized;
+            if (isMinimized) panel.classList.add('mpg-minimized');
+            else panel.classList.remove('mpg-minimized');
         };
-        h.appendChild(minBtn);
+        controls.appendChild(minBtn);
+        header.appendChild(controls);
+        panel.appendChild(header);
 
-        // Allow clicking header to toggle
-        h.onclick = () => {
-            panel.classList.toggle('mpg-minimized');
-            minBtn.textContent = panel.classList.contains('mpg-minimized') ? '+' : '−';
-        };
-
-        panel.appendChild(h);
-
+        // Content Wrapper
         const content = document.createElement('div');
-        content.className = 'mpg-stats-content';
+        content.className = 'mpg-content';
 
         const rows = [];
         rows.push(['Nombre de notes', stats.allMarks.length]);
@@ -443,39 +487,47 @@
             content.appendChild(buildChart(stats));
         }
 
-        // Switch to enable/disable coloring (persistent)
+        // Switch Row
         const switchRow = document.createElement('div');
-        switchRow.className = 'mpg-switch';
-        const chk = document.createElement('input');
-        chk.type = 'checkbox';
-        chk.id = 'mpg-colors-toggle';
-        const stored = localStorage.getItem(COLORS_KEY);
-        chk.checked = (stored === null) ? true : (stored === '1');
-        const lbl = document.createElement('label');
-        lbl.htmlFor = chk.id;
-        lbl.textContent = chk.checked ? 'Couleurs: activées' : 'Couleurs: désactivées';
-        chk.addEventListener('change', () => {
-            const enabled = chk.checked;
-            localStorage.setItem(COLORS_KEY, enabled ? '1' : '0');
+        switchRow.className = 'mpg-switch-container';
+
+        const label = document.createElement('span');
+        label.className = 'mpg-switch-label';
+        label.textContent = 'Coloration des notes';
+        switchRow.appendChild(label);
+
+        const switchLabel = document.createElement('label');
+        switchLabel.className = 'mpg-switch';
+
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = areColorsEnabled;
+        input.onchange = () => {
+            areColorsEnabled = input.checked;
             const s = computeStats();
-            if (enabled) applyColoring(s);
-            else clearColoring(s);
+            applyColoring(s);
             buildPanel(s);
-        });
-        switchRow.appendChild(chk);
-        switchRow.appendChild(lbl);
+        };
+
+        const slider = document.createElement('span');
+        slider.className = 'mpg-slider';
+
+        switchLabel.appendChild(input);
+        switchLabel.appendChild(slider);
+        switchRow.appendChild(switchLabel);
+
         content.appendChild(switchRow);
 
         const note = document.createElement('div');
         note.className = 'mpg-small';
-        note.textContent = 'Vert: >= moyenne pondérée • Rouge: < moyenne pondérée';
+        note.textContent = areColorsEnabled ? 'Vert: >10 • Jaune: 10 • Rouge: <10' : 'Couleurs désactivées';
         content.appendChild(note);
 
         panel.appendChild(content);
 
-        if (isMinimized) {
-            panel.classList.add('mpg-minimized');
-        }
+        // Restore state
+        if (isMinimized) panel.classList.add('mpg-minimized');
+        else panel.classList.remove('mpg-minimized');
     }
 
     let lastRun = 0;
@@ -483,9 +535,7 @@
         addStyles();
         const stats = computeStats();
         if (!stats) return;
-        const enabled = (() => { const v = localStorage.getItem(COLORS_KEY); return v === null ? true : v === '1'; })();
-        if (enabled) applyColoring(stats);
-        else clearColoring(stats);
+        applyColoring(stats);
         buildPanel(stats);
     }
 
