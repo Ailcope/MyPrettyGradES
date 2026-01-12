@@ -15,7 +15,7 @@ Tu as besoin de l'extension **Tampermonkey** (Chrome, Firefox, Edge, Safari) ins
 
 Une fois l'extension prête, clique simplement sur le bouton ci-dessous pour installer le script :
 
-[![Installer le script](https://img.shields.io/badge/Installer_le_script-Tampermonkey-2ecc71?style=for-the-badge&logo=tampermonkey)](https://github.com/Ailcope/MyPrettyGradES/myges-marks.user.js)
+[![Installer le script](https://img.shields.io/badge/Installer_le_script-Tampermonkey-2ecc71?style=for-the-badge&logo=tampermonkey)](https://github.com/Ailcope/MyPrettyGradES/raw/refs/heads/main/myges-marks.user.js)
 
 ## Comment ça marche ?
 
