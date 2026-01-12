@@ -1,9 +1,8 @@
 // ==UserScript==
-// @name         MyGES Marks Stats & Highlighter
+// @name         MyPrettyGradES
 // @namespace    http://tampermonkey.net/
 // @version      0.6
-// @description  Calcule des stats sur les notes, colore les notes et affiche un graphique par matière.
-// @author       (auto)
+// @author       Ailcope
 // @match        https://myges.fr/student/marks
 // @grant        none
 // @run-at       document-idle
