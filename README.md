@@ -1,5 +1,7 @@
 # MyPrettyGradES 🎓
 
+[![Installer le script](https://ailcope.dev/gh/mypges/index.php)]
+
 Un userscript pour rendre la page des notes de MyGES plus lisible, plus colorée.
 
 ## Fonctionnalités ✨
