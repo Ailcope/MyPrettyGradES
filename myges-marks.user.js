@@ -193,6 +193,9 @@
                 const ects = parseNumber(ectsText) || 0;
 
                 const marks = [];
+                const ccValues = [];
+                const examValues = [];
+
                 for (let i = 0; i < tds.length; i++) {
                     if (!markCols.has(i)) continue;
                     const cell = tds[i];
@@ -201,12 +204,29 @@
                     if (n !== null) {
                         marks.push({value: n, cell: cell});
                         allMarks.push(n);
+
+                        const label = (headerLabels[i] || '').toLowerCase();
+                        if (label.includes('exam') || label.includes('partiel') || label.includes('final')) {
+                            examValues.push(n);
+                        } else {
+                            ccValues.push(n);
+                        }
                     }
                 }
 
                 if (DEBUG && marks.length) console.debug('mpg: row', rowIndex, 'marks', marks.map(m=>m.value));
 
-                const avg = marks.length ? (marks.reduce((s,m)=>s+m.value,0)/marks.length) : null;
+                let avg = null;
+                if (marks.length > 0) {
+                    if (ccValues.length > 0 && examValues.length > 0) {
+                        const avgCC = ccValues.reduce((a, b) => a + b, 0) / ccValues.length;
+                        const avgExam = examValues.reduce((a, b) => a + b, 0) / examValues.length;
+                        avg = (avgCC + avgExam) / 2;
+                    } else {
+                        avg = marks.reduce((s, m) => s + m.value, 0) / marks.length;
+                    }
+                }
+
                 if (avg !== null) {
                     totalWeighted += avg * coef;
                     sumCoef += coef;
