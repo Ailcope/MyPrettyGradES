@@ -3,6 +3,9 @@
 // @namespace    http://tampermonkey.net/
 // @version      0.7
 // @author       Ailcope
+// @homepageURL  https://github.com/Ailcope/MyPrettyGradES
+// @supportURL   https://github.com/Ailcope/MyPrettyGradES/issues
+// @license      MIT
 // @match        https://myges.fr/student/marks
 // @grant        none
 // @run-at       document-idle

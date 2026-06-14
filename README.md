@@ -1,29 +1,33 @@
-# MyPrettyGradES 🎓
+# MyPrettyGradES
 
-![Installer le script](https://ailcope.dev/gh/mypges/index.php)
+Un userscript qui rend la page des notes de MyGES plus lisible, plus visuelle et surtout plus utile.
 
-Un userscript pour rendre la page des notes de MyGES plus lisible, plus colorée.
+[![Installer avec Tampermonkey](https://img.shields.io/badge/Installer-Tampermonkey-2ecc71?style=for-the-badge&logo=tampermonkey)](https://github.com/Ailcope/MyPrettyGradES/raw/refs/heads/main/myges-marks.user.js)
 
-## Fonctionnalités ✨
+## Fonctionnalités
 
-*   **Coloré** : Tes notes s'affichent en **Vert** (>10), **Rouge** (<10) ou **Jaune** (=10) pour voir l'état de tes notes direct.
-*   **Statistiques complètes** : Calcul automatique de la moyenne générale (pondérée par les coefficients), total des ECTS, écart-type, etc. (vive les maths, et c'est plus réaliste comme ça)
-*   **Graphique visuel** : Un histogramme s'affiche en bas de page pour voir les moyennes par matière, et comparer visuellement.
-*   **Moyennes par matière** : Ajoute une colonne "Moyenne" calculée pour chaque module.
+- **Notes colorées** : vert au-dessus de 10, rouge en dessous et jaune à 10.
+- **Moyennes pondérées** : calcul automatique à partir des notes et coefficients.
+- **Statistiques utiles** : moyenne générale, ECTS et écart-type.
+- **Vue par matière** : ajout d'une moyenne pour chaque module.
+- **Graphique récapitulatif** : comparaison visuelle des moyennes par matière.
 
-## Installation 🚀
+## Installation
 
-Tu as besoin de l'extension **Tampermonkey** (Chrome, Firefox, Edge, Safari) installée sur ton navigateur.
+1. Installe [Tampermonkey](https://www.tampermonkey.net/) sur Chrome, Firefox, Edge ou Safari.
+2. Clique sur le bouton **Installer** en haut de cette page.
+3. Ouvre la page [Mes notes](https://myges.fr/student/marks) de MyGES.
 
-Une fois l'extension prête, clique simplement sur le bouton ci-dessous pour installer le script :
+Le panneau de statistiques apparaît automatiquement sur la page.
 
-[![Installer le script](https://img.shields.io/badge/Installer_le_script-Tampermonkey-2ecc71?style=for-the-badge&logo=tampermonkey)](https://github.com/Ailcope/MyPrettyGradES/raw/refs/heads/main/myges-marks.user.js)
+## Confidentialité
 
-## Comment ça marche ?
+Le script s'exécute directement dans ton navigateur sur MyGES. Il n'envoie pas tes notes vers un service externe.
 
-1.  Installe le script via le bouton ci-dessus.
-2.  Rends-toi sur ta page de notes [MyGES](https://myges.fr/student/marks).
-3.  C'est tout ! Le panneau de statistiques apparaîtra automatiquement en bas à droite.
+## Licence
+
+Distribué sous licence MIT. Voir [LICENSE](LICENSE).
 
 ---
-*Développé pour rendre MyGES moins guez.* 
+
+*Développé pour rendre MyGES moins guez.*
