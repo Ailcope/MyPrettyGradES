@@ -26,7 +26,7 @@ Le script s'exécute directement dans ton navigateur sur MyGES. Il n'envoie pas 
 
 ## Licence
 
-Distribué sous licence MIT. Voir [LICENSE](LICENSE).
+Distribué sous licence [PolyForm Noncommercial 1.0.0](LICENSE) — usage non commercial libre ; usage commercial ou revente soumis à l'accord de l'auteur.
 
 ---
 
