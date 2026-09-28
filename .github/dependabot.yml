@@ -1,0 +1,14 @@
+# Montées de version proposées une fois par semaine, regroupées pour ne pas
+# noyer le dépôt. Les majeures arrivent seules : elles demandent une lecture.
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      githubactions-mineures:
+        update-types: [minor, patch]
